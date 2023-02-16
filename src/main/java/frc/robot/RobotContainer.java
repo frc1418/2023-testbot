@@ -25,7 +25,6 @@ import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.Constants.DrivetrainSubsystem;
 import frc.robot.Constants.IntakeSubsystemConstants;
 import frc.robot.subsystems.IntakeSubsystem;
-import frc.robot.common.Odometry;
 import frc.robot.subsystems.SwerveDriveSubsystem;
 import frc.robot.subsystems.WheelSubsystem;
 import com.ctre.phoenix.motorcontrol.*;
@@ -89,12 +88,10 @@ public class RobotContainer {
 
 
     private SwerveDriveOdometry driveOdometry = new SwerveDriveOdometry(DrivetrainSubsystem.swerveKinematics, gyro.getRotation2d(), positions);
-
-    private Odometry odometry = new Odometry(gyro, driveOdometry, positions);
     
     private SwerveDriveSubsystem swerveDrive = new SwerveDriveSubsystem(
         backRightWheel, backLeftWheel, frontRightWheel, frontLeftWheel,
-        DrivetrainSubsystem.swerveKinematics, odometry);
+        DrivetrainSubsystem.swerveKinematics);
 
     /** The container for the robot. Contains subsystems, OI devices, and commands. */
     public RobotContainer(RobotBase robot) {
@@ -154,9 +151,9 @@ public class RobotContainer {
           () -> {
             if (robot.isTeleopEnabled()) {
               swerveDrive.drive(
-                  applyDeadband(-leftJoystick.getX() / 4, DrivetrainSubsystem.DRIFT_DEADBAND),
-                  applyDeadband(leftJoystick.getY() / 4,DrivetrainSubsystem.DRIFT_DEADBAND),
-                  applyDeadband(-rightJoystick.getX() / 40, DrivetrainSubsystem.ROTATION_DEADBAND));
+                  applyDeadband(-leftJoystick.getX() * DrivetrainSubsystem.MOVEMENT_SPEED, DrivetrainSubsystem.DRIFT_DEADBAND),
+                  applyDeadband(leftJoystick.getY() * DrivetrainSubsystem.MOVEMENT_SPEED,DrivetrainSubsystem.DRIFT_DEADBAND),
+                  applyDeadband(-rightJoystick.getX() * DrivetrainSubsystem.ROTATION_SPEED, DrivetrainSubsystem.ROTATION_DEADBAND));
             } else {
               swerveDrive.drive(0, 0, 0);
             }
@@ -193,10 +190,6 @@ public class RobotContainer {
     public double applyDeadband(double val, double deadband){
       if (Math.abs(val) < deadband) return 0;
       else return val;
-    }
-
-    public Odometry getOdometry() {
-      return odometry;
     }
 
     public void coastDrive() {

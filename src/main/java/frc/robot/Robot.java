@@ -71,8 +71,6 @@ public class Robot extends TimedRobot {
       m_autonomousCommand.cancel();
     }
 
-    m_robotContainer.getOdometry().zeroHeading();
-    m_robotContainer.getOdometry().reset(new Pose2d(0, 0, new Rotation2d(0)));
     m_robotContainer.configureObjects();
   }
 

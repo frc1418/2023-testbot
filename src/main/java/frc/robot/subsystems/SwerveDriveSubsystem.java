@@ -8,7 +8,6 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.common.Odometry;
 
 public class SwerveDriveSubsystem extends SubsystemBase{
 
@@ -37,18 +36,16 @@ public class SwerveDriveSubsystem extends SubsystemBase{
 
 
     private SwerveDriveKinematics kinematics;
-    private Odometry odometry;
     
     public boolean fieldCentric = false;
 
-    public SwerveDriveSubsystem (WheelSubsystem backRight, WheelSubsystem backLeft, WheelSubsystem frontRight, WheelSubsystem frontLeft, SwerveDriveKinematics kinematics, Odometry odometry) {
+    public SwerveDriveSubsystem (WheelSubsystem backRight, WheelSubsystem backLeft, WheelSubsystem frontRight, WheelSubsystem frontLeft, SwerveDriveKinematics kinematics) {
         this.backRight = backRight;
         this.backLeft = backLeft;
         this.frontRight = frontRight;
         this.frontLeft = frontLeft;
 
         this.kinematics = kinematics;
-        this.odometry = odometry;
 
         this.isFieldCentric.setBoolean(fieldCentric);
     }
@@ -60,9 +57,6 @@ public class SwerveDriveSubsystem extends SubsystemBase{
         ChassisSpeeds speeds = new ChassisSpeeds(x, y, rot);
         // ChassisSpeeds speeds = new ChassisSpeeds(0, 0, 0);
 
-        if (fieldCentric) {
-            speeds = ChassisSpeeds.fromFieldRelativeSpeeds(speeds, odometry.getRotation2d());
-        }
         // Convert to module states
         SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(speeds);
 
@@ -108,9 +102,7 @@ public class SwerveDriveSubsystem extends SubsystemBase{
 
     @Override
     public void periodic() {
-        odometry.update(getPositions());
-
-        odometryPose.setString(odometry.getPose().toString());
+        
 
         // backLeftAngleEncoder.setDouble(backLeft.getDistanceDriven());
         // backRightAngleEncoder.setDouble(backRight.getDistanceDriven());

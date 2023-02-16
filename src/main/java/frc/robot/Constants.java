@@ -50,6 +50,9 @@ public final class Constants {
         public final static Translation2d m_backLeftLocation = new Translation2d(-9.4, 9.4);
         public final static Translation2d m_backRightLocation = new Translation2d(-9.4, -9.4);
 
+        public final static double MOVEMENT_SPEED = 0.25;
+        public final static double ROTATION_SPEED = 0.025;
+
         public final static SwerveDriveKinematics swerveKinematics = new SwerveDriveKinematics(
           m_frontLeftLocation,
           m_frontRightLocation,
