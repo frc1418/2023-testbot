@@ -4,19 +4,13 @@
 
 package frc.robot;
 
-import java.util.HashMap;
-
 import com.kauailabs.navx.frc.AHRS;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
-import edu.wpi.first.math.filter.Debouncer.DebounceType;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.AnalogEncoder;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
@@ -24,21 +18,19 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.interfaces.Gyro;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj.motorcontrol.PWMTalonSRX;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.DrivetrainSubsystem;
-import frc.robot.commands.ExampleCommand;
-import frc.robot.commands.autonomous.ChargeCommand;
+import frc.robot.Constants.IntakeSubsystemConstants;
+import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.common.Odometry;
-import frc.robot.common.TrajectoryLoader;
-import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.SwerveDriveSubsystem;
 import frc.robot.subsystems.WheelSubsystem;
+import com.ctre.phoenix.motorcontrol.*;
+import com.ctre.phoenix.motorcontrol.can.*;
+import edu.wpi.first.wpilibj.*;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -48,10 +40,6 @@ import frc.robot.subsystems.WheelSubsystem;
  */
 public class RobotContainer {
     // The robot's subsystems and commands are defined here...
-    private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
-
-    private final ExampleCommand m_autoCommand = new ExampleCommand(m_exampleSubsystem);
-
     private final RobotBase robot;
 
     private CANSparkMax backRightAngleMotor = new CANSparkMax(DrivetrainSubsystem.BACK_RIGHT_ANGLE_ID, MotorType.kBrushless);
@@ -69,6 +57,7 @@ public class RobotContainer {
     private CANSparkMax frontLeftAngleMotor = new CANSparkMax(DrivetrainSubsystem.FRONT_LEFT_ANGLE_ID, MotorType.kBrushless);
     private CANSparkMax frontLeftSpeedMotor = new CANSparkMax(DrivetrainSubsystem.FRONT_LEFT_SPEED_ID, MotorType.kBrushless);
     private AnalogEncoder frontLeftEncoder = new AnalogEncoder(DrivetrainSubsystem.FRONT_LEFT_ENCODER);
+
 
     private WheelSubsystem backRightWheel = new WheelSubsystem (
         backRightAngleMotor, backRightSpeedMotor, backRightEncoder,
@@ -93,6 +82,12 @@ public class RobotContainer {
       backRightWheel.getSwerveModulePosition()
     };
 
+    private PWMTalonSRX intakeMotor = new PWMTalonSRX(IntakeSubsystemConstants.TALON_ID);
+    Faults _faults = new Faults(); /* temp to fill with latest faults */
+    private IntakeSubsystem intakeSubsystem = new IntakeSubsystem(intakeMotor);
+
+
+
     private SwerveDriveOdometry driveOdometry = new SwerveDriveOdometry(DrivetrainSubsystem.swerveKinematics, gyro.getRotation2d(), positions);
 
     private Odometry odometry = new Odometry(gyro, driveOdometry, positions);
@@ -101,22 +96,9 @@ public class RobotContainer {
         backRightWheel, backLeftWheel, frontRightWheel, frontLeftWheel,
         DrivetrainSubsystem.swerveKinematics, odometry);
 
-    // LOAD TRAJECTORIES
-    private final TrajectoryLoader trajectoryLoader = new TrajectoryLoader();
-    private final HashMap<String, Trajectory> trajectories = trajectoryLoader.loadTrajectories();
-
-    // SENDABLE CHOOSER
-    private final SendableChooser<Command> chooser = new SendableChooser<>();
-    private final Command chargeCommand = new ChargeCommand(swerveDrive, odometry, trajectories);
-
-
     /** The container for the robot. Contains subsystems, OI devices, and commands. */
     public RobotContainer(RobotBase robot) {
       this.robot = robot;
-
-      chooser.setDefaultOption("Charge Command", chargeCommand);
-      chooser.addOption("Command", chargeCommand);
-      SmartDashboard.putData(chooser);
 
       // Configure the button bindings
       configureButtonBindings();
@@ -125,7 +107,7 @@ public class RobotContainer {
 
     public void configureObjects() {
       // frontLeftAngleMotor.setInverted(true);
-      // backLeftAngleMotor.setInverted(true);
+      // backRightAngleMotor.setInverted(true);
 
       frontLeftAngleMotor.setIdleMode(IdleMode.kBrake);
       frontRightAngleMotor.setIdleMode(IdleMode.kBrake);
@@ -140,10 +122,10 @@ public class RobotContainer {
       // frontLeftAngleMotor.setInverted(true);
       // frontRightAngleMotor.setInverted(true);
       // backLeftAngleMotor.setInverted(true);
-      // backRightAngleMotor.setInverted(true);
+      // backRightAngleMotor.setInverted(false);
 
       frontRightSpeedMotor.setInverted(true);
-      backRightSpeedMotor.setInverted(true);
+      backRightSpeedMotor.setInverted(false);
 
       backRightEncoder.setPositionOffset(DrivetrainSubsystem.BACK_RIGHT_ENCODER_OFFSET);
       backLeftEncoder.setPositionOffset(DrivetrainSubsystem.BACK_LEFT_ENCODER_OFFSET);
@@ -160,32 +142,38 @@ public class RobotContainer {
     private void configureButtonBindings() {
       Joystick leftJoystick = new Joystick(0);
       Joystick rightJoystick = new Joystick(1);
+      Joystick altJoystick = new Joystick(2);
 
-      
 
-      JoystickButton resetEncoderButton = new JoystickButton(rightJoystick, 3);
+      JoystickButton intakeInButton = new JoystickButton(altJoystick, 6);
 
-      JoystickButton fieldCentricButton = new JoystickButton(leftJoystick, 2);
+      JoystickButton intakeOutButton = new JoystickButton(altJoystick, 5);
 
 
       swerveDrive.setDefaultCommand(new RunCommand(
           () -> {
             if (robot.isTeleopEnabled()) {
               swerveDrive.drive(
-                  applyDeadband(-leftJoystick.getY() / 2, DrivetrainSubsystem.DRIFT_DEADBAND),
-                  applyDeadband(-leftJoystick.getX() / 2,DrivetrainSubsystem.DRIFT_DEADBAND),
-                  applyDeadband(-rightJoystick.getX() / 32, DrivetrainSubsystem.ROTATION_DEADBAND));
+                  applyDeadband(-leftJoystick.getX() / 4, DrivetrainSubsystem.DRIFT_DEADBAND),
+                  applyDeadband(leftJoystick.getY() / 4,DrivetrainSubsystem.DRIFT_DEADBAND),
+                  applyDeadband(-rightJoystick.getX() / 40, DrivetrainSubsystem.ROTATION_DEADBAND));
             } else {
               swerveDrive.drive(0, 0, 0);
             }
           },
           swerveDrive));
 
-      fieldCentricButton.onTrue(new InstantCommand(
-          () -> {
-            System.out.println("FIELD CENTRIC TOGGLED");
-            swerveDrive.toggleFieldCentric();
-          }, swerveDrive));
+      intakeInButton.whileTrue(new RunCommand(() -> intakeSubsystem.setIntakeMotor(0.25), intakeSubsystem));
+      intakeInButton.onFalse(new InstantCommand(() -> intakeSubsystem.setIntakeMotor(0)));
+
+      intakeOutButton.whileTrue(new RunCommand(() -> intakeSubsystem.setIntakeMotor(-0.5), intakeSubsystem));
+      intakeOutButton.onFalse(new InstantCommand(() -> intakeSubsystem.setIntakeMotor(0)));
+
+      // fieldCentricButton.onTrue(new InstantCommand(
+      //     () -> {
+      //       System.out.println("FIELD CENTRIC TOGGLED");
+      //       swerveDrive.toggleFieldCentric();
+      //     }, swerveDrive));
 
       // resetEncoderButton.whileTrue(new RunCommand(
       //   () -> {
@@ -201,11 +189,6 @@ public class RobotContainer {
      *
      * @return the command to run in autonomous
      */
-    public Command getAutonomousCommand() {
-      // An ExampleCommand will run in autonomous
-      odometry.zeroHeading();
-      return chargeCommand;
-    }
 
     public double applyDeadband(double val, double deadband){
       if (Math.abs(val) < deadband) return 0;

@@ -57,4 +57,7 @@ public final class Constants {
           m_backRightLocation);
 
     }
+    public final static class IntakeSubsystemConstants {
+        public final static int TALON_ID = 0;
+    }
 }
